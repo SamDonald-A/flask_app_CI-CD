@@ -87,8 +87,8 @@ jobs:
 
       - name: Create .env for production
         run: |
-          echo "MONGO_URI=${{ secrets.PROD_MONGO_URI }}" > .env
-          echo "SECRET_KEY=${{ secrets.PROD_SECRET_KEY }}" >> .env
+          echo "MONGO_URI=${{ secrets.MONGO_URI }}" > .env
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
 
       - name: Zip project
         run: zip -r app.zip . -x "*.git*"
@@ -96,12 +96,12 @@ jobs:
       - name: Upload to production EC2
         run: |
           scp -o StrictHostKeyChecking=no \
-          -i ${{ secrets.EC2_KEY }} \
+          -i ${{ secrets.PROD_EC2_KEY }} \
           app.zip ubuntu@${{ secrets.PROD_EC2_HOST }}:/home/ubuntu/app.zip
 
       - name: Deploy on production EC2 
         run: |
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_KEY }} ubuntu@${{ secrets.PROD_EC2_HOST }} '
+          ssh -o StrictHostKeyChecking=no -i ${{ secrets.PROD_EC2_KEY }} ubuntu@${{ secrets.PROD_EC2_HOST }} '
             sudo apt update -y
             sudo apt install unzip python3-venv -y
 
