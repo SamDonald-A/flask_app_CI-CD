@@ -6,12 +6,12 @@ on:
       - staging     
   create:
     tags:
-      - '*'        
+      - '*'          
 
 jobs:
   # staging
   deploy-staging:
-    if: github.ref == 'refs/heads/staging'  # condition executes only when code pushed to staging branch
+    if: github.ref == 'refs/heads/staging'   # Only run when pushing to staging
     runs-on: ubuntu-latest
 
     steps:
@@ -31,20 +31,15 @@ jobs:
     - name: Zip project
       run: zip -r app.zip . -x "*.git*"
 
-    - name: Save SSH key for staging
-      run: |
-        echo "${{ secrets.STAGING_EC2_KEY }}" > staging_key.pem
-        chmod 600 staging_key.pem
-
     - name: Upload to staging EC2
       run: |
         scp -o StrictHostKeyChecking=no \
-        -i staging_key.pem \
+        -i ${{ secrets.STAGING_EC2_KEY }} \
         app.zip ubuntu@${{ secrets.STAGING_EC2_HOST }}:/home/ubuntu/app.zip
 
     - name: Deploy on staging EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i staging_key.pem ubuntu@${{ secrets.STAGING_EC2_HOST }} '
+        ssh -o StrictHostKeyChecking=no -i ${{ secrets.STAGING_EC2_KEY }} ubuntu@${{ secrets.STAGING_EC2_HOST }} '
           sudo apt update -y
           sudo apt install unzip python3-venv -y
 
@@ -78,7 +73,7 @@ jobs:
 
   # prod
   deploy-production:
-    if: startsWith(github.ref, 'refs/tags/')  # condition executes only when a tag is created
+    if: startsWith(github.ref, 'refs/tags/')   # Only run when a tag is created
     runs-on: ubuntu-latest
 
     steps:
@@ -98,20 +93,15 @@ jobs:
     - name: Zip project
       run: zip -r app.zip . -x "*.git*"
 
-    - name: Save SSH key for production
-      run: |
-        echo "${{ secrets.EC2_KEY }}" > prod_key.pem
-        chmod 600 prod_key.pem
-
     - name: Upload to production EC2
       run: |
         scp -o StrictHostKeyChecking=no \
-        -i prod_key.pem \
+        -i ${{ secrets.EC2_KEY }} \
         app.zip ubuntu@${{ secrets.PROD_EC2_HOST }}:/home/ubuntu/app.zip
 
     - name: Deploy on production EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i prod_key.pem ubuntu@${{ secrets.PROD_EC2_HOST }} '
+        ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_KEY }} ubuntu@${{ secrets.PROD_EC2_HOST }} '
           sudo apt update -y
           sudo apt install unzip python3-venv -y
 
