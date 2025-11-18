@@ -67,7 +67,7 @@ jobs:
           User=ubuntu
           WorkingDirectory=/home/ubuntu/app
           EnvironmentFile=/home/ubuntu/app/.env
-          ExecStart=/bin/bash -c 'source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py'
+          ExecStart=/bin/bash -c \"source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py\"
           Restart=always
 
           [Install]
@@ -137,7 +137,7 @@ jobs:
           User=ubuntu
           WorkingDirectory=/home/ubuntu/app
           EnvironmentFile=/home/ubuntu/app/.env
-          ExecStart=/bin/bash -c 'source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py'
+          ExecStart=/bin/bash -c \"source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py\"
           Restart=always
 
           [Install]
