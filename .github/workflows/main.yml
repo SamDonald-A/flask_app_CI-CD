@@ -1,18 +1,17 @@
 name: Sam CI/CD Pipeline
 
-# Trigger workflow
 on:
   push:
     branches:
-      - staging    
+      - staging     
   create:
     tags:
-      - '*'        
+      - '*'         
 
 jobs:
   # staging
   deploy-staging:
-    if: github.ref == 'refs/heads/staging' # Only runs on staging branch push
+    if: github.ref == 'refs/heads/staging' # execute only when code is pushed to staging
     runs-on: ubuntu-latest
 
     steps:
@@ -24,37 +23,41 @@ jobs:
       with:
         python-version: "3.10"
 
-    # Create .env for staging
     - name: Create .env for staging
       run: |
-        echo "MONGO_URI=${{ secrets.MONGO_URI }}" > .env
-        echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+        echo "MONGO_URI=${{ secrets.STAGING_MONGO_URI }}" > .env
+        echo "SECRET_KEY=${{ secrets.STAGING_SECRET_KEY }}" >> .env
 
-    # Save EC2 private key from secret
-    - name: Save staging EC2 key
-      run: |
-        echo "${{ secrets.STAGING_EC2_KEY }}" > ~/staging_key.pem
-        chmod 600 ~/staging_key.pem
-
-    # Zip project excluding .git folder
     - name: Zip project
       run: zip -r app.zip . -x "*.git*"
 
-    # Upload to staging EC2
+    - name: Setup EC2 key for staging
+      run: |
+        echo "${{ secrets.STAGING_EC2_KEY }}" > ec2_staging.pem
+        chmod 600 ec2_staging.pem
+
     - name: Upload to staging EC2
       run: |
-        scp -o StrictHostKeyChecking=no -i ~/staging_key.pem app.zip ubuntu@${{ secrets.STAGING_EC2_HOST }}:/home/ubuntu/app.zip
+        scp -o StrictHostKeyChecking=no \
+        -i ec2_staging.pem \
+        app.zip ubuntu@${{ secrets.STAGING_EC2_HOST }}:/home/ubuntu/app.zip
 
-    # Deploy on staging EC2
     - name: Deploy on staging EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i ~/staging_key.pem ubuntu@${{ secrets.STAGING_EC2_HOST }} '
+        ssh -o StrictHostKeyChecking=no -i ec2_staging.pem ubuntu@${{ secrets.STAGING_EC2_HOST }} '
+
           sudo apt update -y
-          sudo apt install unzip python3-venv -y
+          sudo apt install -y unzip python3-venv python3-pip
 
           sudo rm -rf /home/ubuntu/app
           sudo mkdir -p /home/ubuntu/app
           sudo unzip -o /home/ubuntu/app.zip -d /home/ubuntu/app
+
+          cd /home/ubuntu/app
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
           echo "[Unit]
           Description=Flask App
@@ -64,18 +67,11 @@ jobs:
           User=ubuntu
           WorkingDirectory=/home/ubuntu/app
           EnvironmentFile=/home/ubuntu/app/.env
-          ExecStart=/home/ubuntu/app/venv/bin/python3 app.py
+          ExecStart=/bin/bash -c 'source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py'
           Restart=always
 
           [Install]
           WantedBy=multi-user.target" | sudo tee /etc/systemd/system/flaskapp.service
-
-          cd /home/ubuntu/app
-
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
 
           sudo systemctl daemon-reload
           sudo systemctl enable flaskapp
@@ -84,7 +80,7 @@ jobs:
 
   # prod
   deploy-production:
-    if: startsWith(github.ref, 'refs/tags/') # Only runs on git tags
+    if: startsWith(github.ref, 'refs/tags/') # execute only when a tag is created
     runs-on: ubuntu-latest
 
     steps:
@@ -96,37 +92,42 @@ jobs:
       with:
         python-version: "3.10"
 
-    # Create .env for production
     - name: Create .env for production
       run: |
         echo "MONGO_URI=${{ secrets.PROD_MONGO_URI }}" > .env
         echo "SECRET_KEY=${{ secrets.PROD_SECRET_KEY }}" >> .env
 
-    # Save EC2 private key from secret
-    - name: Save production EC2 key
-      run: |
-        echo "${{ secrets.PROD_EC2_KEY }}" > ~/prod_key.pem
-        chmod 600 ~/prod_key.pem
-
-    # Zip project excluding .git folder
     - name: Zip project
       run: zip -r app.zip . -x "*.git*"
 
-    # Upload to production EC2
+    - name: Setup EC2 key for production
+      run: |
+        echo "${{ secrets.PROD_EC2_KEY }}" > ec2_prod.pem
+        chmod 600 ec2_prod.pem
+
     - name: Upload to production EC2
       run: |
-        scp -o StrictHostKeyChecking=no -i ~/prod_key.pem app.zip ubuntu@${{ secrets.PROD_EC2_HOST }}:/home/ubuntu/app.zip
+        scp -o StrictHostKeyChecking=no \
+        -i ec2_prod.pem \
+        app.zip ubuntu@${{ secrets.PROD_EC2_HOST }}:/home/ubuntu/app.zip
 
-    # Deploy on production EC2
     - name: Deploy on production EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i ~/prod_key.pem ubuntu@${{ secrets.PROD_EC2_HOST }} '
+        ssh -o StrictHostKeyChecking=no -i ec2_prod.pem ubuntu@${{ secrets.PROD_EC2_HOST }} '
+
           sudo apt update -y
-          sudo apt install unzip python3-venv -y
+          sudo apt install -y unzip python3-venv python3-pip
 
           sudo rm -rf /home/ubuntu/app
           sudo mkdir -p /home/ubuntu/app
           sudo unzip -o /home/ubuntu/app.zip -d /home/ubuntu/app
+
+
+          cd /home/ubuntu/app
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
           echo "[Unit]
           Description=Flask App
@@ -136,18 +137,11 @@ jobs:
           User=ubuntu
           WorkingDirectory=/home/ubuntu/app
           EnvironmentFile=/home/ubuntu/app/.env
-          ExecStart=/home/ubuntu/app/venv/bin/python3 app.py
+          ExecStart=/bin/bash -c 'source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py'
           Restart=always
 
           [Install]
           WantedBy=multi-user.target" | sudo tee /etc/systemd/system/flaskapp.service
-
-          cd /home/ubuntu/app
-
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
 
           sudo systemctl daemon-reload
           sudo systemctl enable flaskapp
