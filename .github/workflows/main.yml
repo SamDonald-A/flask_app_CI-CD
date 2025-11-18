@@ -6,130 +6,141 @@ on:
       - staging     
   create:
     tags:
-      - '*'         
+      - '*'        
 
 jobs:
   # staging
   deploy-staging:
-    if: github.ref == 'refs/heads/staging' #condition execute only when code push to this branch
+    if: github.ref == 'refs/heads/staging'  # condition executes only when code pushed to staging branch
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
 
-      - name: Create .env for staging
-        run: |
-          echo "MONGO_URI=${{ secrets.MONGO_URI }}" > .env
-          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+    - name: Create .env for staging
+      run: |
+        echo "MONGO_URI=${{ secrets.MONGO_URI }}" > .env
+        echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
 
-      - name: Zip project
-        run: zip -r app.zip . -x "*.git*"
+    - name: Zip project
+      run: zip -r app.zip . -x "*.git*"
 
-      - name: Upload to staging EC2
-        run: |
-          scp -o StrictHostKeyChecking=no \
-          -i ${{ secrets.STAGING_EC2_KEY }} \
-          app.zip ubuntu@${{ secrets.STAGING_EC2_HOST }}:/home/ubuntu/app.zip
+    - name: Save SSH key for staging
+      run: |
+        echo "${{ secrets.STAGING_EC2_KEY }}" > staging_key.pem
+        chmod 600 staging_key.pem
 
-      - name: Deploy on staging EC2
-        run: |
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.STAGING_EC2_KEY }} ubuntu@${{ secrets.STAGING_EC2_HOST }} '
-            sudo apt update -y
-            sudo apt install unzip python3-venv -y
+    - name: Upload to staging EC2
+      run: |
+        scp -o StrictHostKeyChecking=no \
+        -i staging_key.pem \
+        app.zip ubuntu@${{ secrets.STAGING_EC2_HOST }}:/home/ubuntu/app.zip
 
-            sudo rm -rf /home/ubuntu/app
-            sudo mkdir -p /home/ubuntu/app
-            sudo unzip -o /home/ubuntu/app.zip -d /home/ubuntu/app
-            
-            echo "[Unit]
-            Description=Flask App
-            After=network.target
+    - name: Deploy on staging EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no -i staging_key.pem ubuntu@${{ secrets.STAGING_EC2_HOST }} '
+          sudo apt update -y
+          sudo apt install unzip python3-venv -y
 
-            [Service]
-            User=ubuntu
-            WorkingDirectory=/home/ubuntu/app
-            EnvironmentFile=/home/ubuntu/app/.env
-            ExecStart=/home/ubuntu/app/venv/bin/python3 app.py
-            Restart=always
+          sudo rm -rf /home/ubuntu/app
+          sudo mkdir -p /home/ubuntu/app
+          sudo unzip -o /home/ubuntu/app.zip -d /home/ubuntu/app
 
-            [Install]
-            WantedBy=multi-user.target" | sudo tee /etc/systemd/system/flaskapp.service
+          # Setup systemd for automated integration
+          echo "[Unit]
+          Description=Flask App
+          After=network.target
 
-            cd /home/ubuntu/app
-            python3 -m venv venv
-            source venv/bin/activate
-            pip install -r requirements.txt
+          [Service]
+          User=ubuntu
+          WorkingDirectory=/home/ubuntu/app
+          EnvironmentFile=/home/ubuntu/app/.env
+          ExecStart=/home/ubuntu/app/venv/bin/python3 app.py
+          Restart=always
 
-            sudo systemctl daemon-reload
-            sudo systemctl enable flaskapp
-            sudo systemctl restart flaskapp
-          '
+          [Install]
+          WantedBy=multi-user.target" | sudo tee /etc/systemd/system/flaskapp.service
+
+          cd /home/ubuntu/app
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable flaskapp
+          sudo systemctl restart flaskapp
+        '
 
   # prod
   deploy-production:
-    if: startsWith(github.ref, 'refs/tags/') # condition execute only when tagged
+    if: startsWith(github.ref, 'refs/tags/')  # condition executes only when a tag is created
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
 
-      - name: Create .env for production
-        run: |
-          echo "MONGO_URI=${{ secrets.MONGO_URI }}" > .env
-          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+    - name: Create .env for production
+      run: |
+        echo "MONGO_URI=${{ secrets.PROD_MONGO_URI }}" > .env
+        echo "SECRET_KEY=${{ secrets.PROD_SECRET_KEY }}" >> .env
 
-      - name: Zip project
-        run: zip -r app.zip . -x "*.git*"
+    - name: Zip project
+      run: zip -r app.zip . -x "*.git*"
 
-      - name: Upload to production EC2
-        run: |
-          scp -o StrictHostKeyChecking=no \
-          -i ${{ secrets.PROD_EC2_KEY }} \
-          app.zip ubuntu@${{ secrets.PROD_EC2_HOST }}:/home/ubuntu/app.zip
+    - name: Save SSH key for production
+      run: |
+        echo "${{ secrets.EC2_KEY }}" > prod_key.pem
+        chmod 600 prod_key.pem
 
-      - name: Deploy on production EC2 
-        run: |
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.PROD_EC2_KEY }} ubuntu@${{ secrets.PROD_EC2_HOST }} '
-            sudo apt update -y
-            sudo apt install unzip python3-venv -y
+    - name: Upload to production EC2
+      run: |
+        scp -o StrictHostKeyChecking=no \
+        -i prod_key.pem \
+        app.zip ubuntu@${{ secrets.PROD_EC2_HOST }}:/home/ubuntu/app.zip
 
-            sudo rm -rf /home/ubuntu/app
-            sudo mkdir -p /home/ubuntu/app
-            sudo unzip -o /home/ubuntu/app.zip -d /home/ubuntu/app
+    - name: Deploy on production EC2
+      run: |
+        ssh -o StrictHostKeyChecking=no -i prod_key.pem ubuntu@${{ secrets.PROD_EC2_HOST }} '
+          sudo apt update -y
+          sudo apt install unzip python3-venv -y
 
-            # Setup systemd for automated integration
-            echo "[Unit]
-            Description=Flask App
-            After=network.target
+          sudo rm -rf /home/ubuntu/app
+          sudo mkdir -p /home/ubuntu/app
+          sudo unzip -o /home/ubuntu/app.zip -d /home/ubuntu/app
 
-            [Service]
-            User=ubuntu
-            WorkingDirectory=/home/ubuntu/app
-            EnvironmentFile=/home/ubuntu/app/.env
-            ExecStart=/home/ubuntu/app/venv/bin/python3 app.py
-            Restart=always
+          # Setup systemd for automated integration
+          echo "[Unit]
+          Description=Flask App
+          After=network.target
 
-            [Install]
-            WantedBy=multi-user.target" | sudo tee /etc/systemd/system/flaskapp.service
+          [Service]
+          User=ubuntu
+          WorkingDirectory=/home/ubuntu/app
+          EnvironmentFile=/home/ubuntu/app/.env
+          ExecStart=/home/ubuntu/app/venv/bin/python3 app.py
+          Restart=always
 
-            cd /home/ubuntu/app
-            python3 -m venv venv
-            source venv/bin/activate
-            pip install -r requirements.txt
+          [Install]
+          WantedBy=multi-user.target" | sudo tee /etc/systemd/system/flaskapp.service
 
-            sudo systemctl daemon-reload
-            sudo systemctl enable flaskapp
-            sudo systemctl restart flaskapp
-          '
+          cd /home/ubuntu/app
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable flaskapp
+          sudo systemctl restart flaskapp
+        '
