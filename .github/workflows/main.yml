@@ -52,7 +52,6 @@ jobs:
           sudo mkdir -p /home/ubuntu/app
           sudo unzip -o /home/ubuntu/app.zip -d /home/ubuntu/app
 
-          # Setup systemd for automated integration
           echo "[Unit]
           Description=Flask App
           After=network.target
@@ -120,7 +119,6 @@ jobs:
           sudo mkdir -p /home/ubuntu/app
           sudo unzip -o /home/ubuntu/app.zip -d /home/ubuntu/app
 
-          # Setup systemd for automated integration
           echo "[Unit]
           Description=Flask App
           After=network.target
