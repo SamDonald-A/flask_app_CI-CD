@@ -3,15 +3,15 @@ name: Sam CI/CD Pipeline
 on:
   push:
     branches:
-      - staging     
+      - staging    
   create:
     tags:
-      - '*'          
+      - '*'        
 
 jobs:
   # staging
   deploy-staging:
-    if: github.ref == 'refs/heads/staging'   # Only run when pushing to staging
+    if: github.ref == 'refs/heads/staging' # Condition: run only when code pushed to staging
     runs-on: ubuntu-latest
 
     steps:
@@ -23,29 +23,42 @@ jobs:
       with:
         python-version: "3.10"
 
+    # Create .env for staging
     - name: Create .env for staging
       run: |
         echo "MONGO_URI=${{ secrets.MONGO_URI }}" > .env
         echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
 
+    # Zip the project
     - name: Zip project
       run: zip -r app.zip . -x "*.git*"
 
+    # Save staging EC2 key to a file
+    - name: Save EC2 key to file
+      run: |
+        echo "${{ secrets.STAGING_EC2_KEY }}" > staging_key.pem
+        chmod 600 staging_key.pem
+
+    # Upload to staging EC2
     - name: Upload to staging EC2
       run: |
         scp -o StrictHostKeyChecking=no \
-        -i ${{ secrets.STAGING_EC2_KEY }} \
+        -i staging_key.pem \
         app.zip ubuntu@${{ secrets.STAGING_EC2_HOST }}:/home/ubuntu/app.zip
 
+    # Deploy on staging EC2
     - name: Deploy on staging EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i ${{ secrets.STAGING_EC2_KEY }} ubuntu@${{ secrets.STAGING_EC2_HOST }} '
+        ssh -o StrictHostKeyChecking=no -i staging_key.pem ubuntu@${{ secrets.STAGING_EC2_HOST }} '
+
           sudo apt update -y
           sudo apt install unzip python3-venv -y
 
           sudo rm -rf /home/ubuntu/app
           sudo mkdir -p /home/ubuntu/app
+
           sudo unzip -o /home/ubuntu/app.zip -d /home/ubuntu/app
+
 
           echo "[Unit]
           Description=Flask App
@@ -73,7 +86,7 @@ jobs:
 
   # prod
   deploy-production:
-    if: startsWith(github.ref, 'refs/tags/')   # Only run when a tag is created
+    if: startsWith(github.ref, 'refs/tags/') # Condition: run only when a release tag is created
     runs-on: ubuntu-latest
 
     steps:
@@ -85,28 +98,40 @@ jobs:
       with:
         python-version: "3.10"
 
+    # Create .env for production
     - name: Create .env for production
       run: |
         echo "MONGO_URI=${{ secrets.PROD_MONGO_URI }}" > .env
         echo "SECRET_KEY=${{ secrets.PROD_SECRET_KEY }}" >> .env
 
+    # Zip the project
     - name: Zip project
       run: zip -r app.zip . -x "*.git*"
 
+    # Save production EC2 key to a file
+    - name: Save production EC2 key to file
+      run: |
+        echo "${{ secrets.EC2_KEY }}" > prod_key.pem
+        chmod 600 prod_key.pem
+
+    # Upload to production EC2
     - name: Upload to production EC2
       run: |
         scp -o StrictHostKeyChecking=no \
-        -i ${{ secrets.EC2_KEY }} \
+        -i prod_key.pem \
         app.zip ubuntu@${{ secrets.PROD_EC2_HOST }}:/home/ubuntu/app.zip
 
+    # Deploy on production EC2
     - name: Deploy on production EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_KEY }} ubuntu@${{ secrets.PROD_EC2_HOST }} '
+        ssh -o StrictHostKeyChecking=no -i prod_key.pem ubuntu@${{ secrets.PROD_EC2_HOST }} '
+
           sudo apt update -y
           sudo apt install unzip python3-venv -y
 
           sudo rm -rf /home/ubuntu/app
           sudo mkdir -p /home/ubuntu/app
+
           sudo unzip -o /home/ubuntu/app.zip -d /home/ubuntu/app
 
           echo "[Unit]
