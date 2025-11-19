@@ -9,6 +9,7 @@ on:
       - '*'         
 
 jobs:
+
   # staging
   deploy-staging:
     if: github.ref == 'refs/heads/staging'
@@ -43,13 +44,13 @@ jobs:
     # Upload code to EC2
     - name: Upload to staging EC2
       run: |
-        scp -o StrictHostKeyChecking=no -i ~/.ssh/staging_key.pem app.zip ubuntu@${{ secrets.STAGING_EC2_HOST }}:/home/ubuntu/app.zip
+        scp -o StrictHostKeyChecking=no -i ~/.ssh/staging_key.pem app.zip \
+        ubuntu@${{ secrets.STAGING_EC2_HOST }}:/home/ubuntu/app.zip
 
-    # Deploy and run Flask in background
+    # Deploy and run Flask
     - name: Deploy on staging EC2
       run: |
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/staging_key.pem ubuntu@${{ secrets.STAGING_EC2_HOST }} '
-
           sudo apt update -y
           sudo apt install unzip python3-venv python3-pip -y
 
@@ -59,9 +60,8 @@ jobs:
 
           cd /home/ubuntu/app
           python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install flask==2.3.2 flask-pymongo==2.3.0 pymongo==3.13.1 python-dotenv==1.0.0
+          /home/ubuntu/app/venv/bin/pip install --upgrade pip
+          /home/ubuntu/app/venv/bin/pip install flask==2.3.2 flask-pymongo==2.3.0 pymongo==3.13.1 python-dotenv==1.0.0
 
           echo "[Unit]
           Description=Flask App
@@ -71,7 +71,7 @@ jobs:
           User=ubuntu
           WorkingDirectory=/home/ubuntu/app
           EnvironmentFile=/home/ubuntu/app/.env
-          ExecStart=/bin/bash -c '\''source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py'\''
+          ExecStart=/home/ubuntu/app/venv/bin/python /home/ubuntu/app/app.py
 
           Restart=always
 
@@ -114,7 +114,8 @@ jobs:
 
     - name: Upload to production EC2
       run: |
-        scp -o StrictHostKeyChecking=no -i ~/.ssh/prod_key.pem app.zip ubuntu@${{ secrets.PROD_EC2_HOST }}:/home/ubuntu/app.zip
+        scp -o StrictHostKeyChecking=no -i ~/.ssh/prod_key.pem app.zip \
+        ubuntu@${{ secrets.PROD_EC2_HOST }}:/home/ubuntu/app.zip
 
     - name: Deploy on production EC2
       run: |
@@ -128,9 +129,8 @@ jobs:
 
           cd /home/ubuntu/app
           python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install flask==2.3.2 flask-pymongo==2.3.0 pymongo==3.13.1 python-dotenv==1.0.0
+          /home/ubuntu/app/venv/bin/pip install --upgrade pip
+          /home/ubuntu/app/venv/bin/pip install flask==2.3.2 flask-pymongo==2.3.0 pymongo==3.13.1 python-dotenv==1.0.0
 
           echo "[Unit]
           Description=Flask App
@@ -140,7 +140,7 @@ jobs:
           User=ubuntu
           WorkingDirectory=/home/ubuntu/app
           EnvironmentFile=/home/ubuntu/app/.env
-          ExecStart=/bin/bash -c '\''source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py'\''
+          ExecStart=/home/ubuntu/app/venv/bin/python /home/ubuntu/app/app.py
 
           Restart=always
 
