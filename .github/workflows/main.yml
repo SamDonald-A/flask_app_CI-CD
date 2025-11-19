@@ -7,7 +7,7 @@ on:
   create:
     tags:
       - '*'
-
+# staging
 jobs:
   deploy-staging:
     if: github.ref == 'refs/heads/staging'
@@ -42,6 +42,7 @@ jobs:
             sudo systemctl restart flaskapp
           '
 
+# prod
   deploy-production:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
