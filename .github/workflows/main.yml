@@ -6,12 +6,12 @@ on:
       - staging     
   create:
     tags:
-      - '*'         
+      - '*'        
 
 jobs:
   # staging
   deploy-staging:
-    if: github.ref == 'refs/heads/staging' # execute only when code is pushed to staging
+    if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
 
     steps:
@@ -31,16 +31,19 @@ jobs:
     - name: Zip project
       run: zip -r app.zip . -x "*.git*"
 
+    - name: Setup SSH key for staging
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.STAGING_EC2_KEY }}" > ~/.ssh/staging_key.pem
+        chmod 600 ~/.ssh/staging_key.pem
+
     - name: Upload to staging EC2
       run: |
-        scp -o StrictHostKeyChecking=no \
-        -i ${{ secrets.STAGING_EC2_KEY }} \
-        app.zip ubuntu@${{ secrets.STAGING_EC2_HOST }}:/home/ubuntu/app.zip
+        scp -o StrictHostKeyChecking=no -i ~/.ssh/staging_key.pem app.zip ubuntu@${{ secrets.STAGING_EC2_HOST }}:/home/ubuntu/app.zip
 
     - name: Deploy on staging EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i ${{ secrets.STAGING_EC2_KEY }} ubuntu@${{ secrets.STAGING_EC2_HOST }} "
-
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/staging_key.pem ubuntu@${{ secrets.STAGING_EC2_HOST }} '
           sudo apt update -y
           sudo apt install unzip python3-venv python3-pip -y
 
@@ -54,7 +57,7 @@ jobs:
           pip install --upgrade pip
           pip install flask==2.3.2 flask-pymongo==2.3.0 pymongo==3.13.1 python-dotenv
 
-          echo \"[Unit]
+          echo "[Unit]
           Description=Flask App
           After=network.target
 
@@ -62,20 +65,20 @@ jobs:
           User=ubuntu
           WorkingDirectory=/home/ubuntu/app
           EnvironmentFile=/home/ubuntu/app/.env
-          ExecStart=/bin/bash -c 'source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py'
+          ExecStart=/bin/bash -c '\''source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py'\''
           Restart=always
 
           [Install]
-          WantedBy=multi-user.target\" | sudo tee /etc/systemd/system/flaskapp.service
+          WantedBy=multi-user.target" | sudo tee /etc/systemd/system/flaskapp.service
 
           sudo systemctl daemon-reload
           sudo systemctl enable flaskapp
           sudo systemctl restart flaskapp
-        "
+        '
 
   # prod
   deploy-production:
-    if: startsWith(github.ref, 'refs/tags/') # execute only when a tag is created
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
 
     steps:
@@ -95,16 +98,19 @@ jobs:
     - name: Zip project
       run: zip -r app.zip . -x "*.git*"
 
+    - name: Setup SSH key for production
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.PROD_EC2_KEY }}" > ~/.ssh/prod_key.pem
+        chmod 600 ~/.ssh/prod_key.pem
+
     - name: Upload to production EC2
       run: |
-        scp -o StrictHostKeyChecking=no \
-        -i ${{ secrets.PROD_EC2_KEY }} \
-        app.zip ubuntu@${{ secrets.PROD_EC2_HOST }}:/home/ubuntu/app.zip
+        scp -o StrictHostKeyChecking=no -i ~/.ssh/prod_key.pem app.zip ubuntu@${{ secrets.PROD_EC2_HOST }}:/home/ubuntu/app.zip
 
     - name: Deploy on production EC2
       run: |
-        ssh -o StrictHostKeyChecking=no -i ${{ secrets.PROD_EC2_KEY }} ubuntu@${{ secrets.PROD_EC2_HOST }} "
-
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/prod_key.pem ubuntu@${{ secrets.PROD_EC2_HOST }} '
           sudo apt update -y
           sudo apt install unzip python3-venv python3-pip -y
 
@@ -112,15 +118,13 @@ jobs:
           sudo mkdir -p /home/ubuntu/app
           sudo unzip -o /home/ubuntu/app.zip -d /home/ubuntu/app
 
-
           cd /home/ubuntu/app
           python3 -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
           pip install flask==2.3.2 flask-pymongo==2.3.0 pymongo==3.13.1 python-dotenv
 
-
-          echo \"[Unit]
+          echo "[Unit]
           Description=Flask App
           After=network.target
 
@@ -128,14 +132,13 @@ jobs:
           User=ubuntu
           WorkingDirectory=/home/ubuntu/app
           EnvironmentFile=/home/ubuntu/app/.env
-          ExecStart=/bin/bash -c 'source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py'
+          ExecStart=/bin/bash -c '\''source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py'\''
           Restart=always
 
           [Install]
-          WantedBy=multi-user.target\" | sudo tee /etc/systemd/system/flaskapp.service
-
+          WantedBy=multi-user.target" | sudo tee /etc/systemd/system/flaskapp.service
 
           sudo systemctl daemon-reload
           sudo systemctl enable flaskapp
           sudo systemctl restart flaskapp
-        "
+        '
