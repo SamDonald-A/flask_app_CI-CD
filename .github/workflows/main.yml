@@ -3,10 +3,10 @@ name: Sam CI/CD Pipeline
 on:
   push:
     branches:
-      - staging     
+      - staging
   create:
     tags:
-      - '*'         
+      - "*"
 
 jobs:
 
@@ -16,6 +16,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
     - name: Checkout code
       uses: actions/checkout@v3
 
@@ -24,30 +25,25 @@ jobs:
       with:
         python-version: "3.10"
 
-    # Create .env for staging
     - name: Create .env for staging
       run: |
         echo "MONGO_URI=${{ secrets.MONGO_URI }}" > .env
         echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
 
-    # Zip the project
     - name: Zip project
       run: zip -r app.zip . -x "*.git*"
 
-    # Setup SSH key
     - name: Setup SSH key for staging
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.STAGING_EC2_KEY }}" > ~/.ssh/staging_key.pem
         chmod 600 ~/.ssh/staging_key.pem
 
-    # Upload code to EC2
-    - name: Upload to staging EC2
+    - name: Upload code to staging EC2
       run: |
         scp -o StrictHostKeyChecking=no -i ~/.ssh/staging_key.pem app.zip \
         ubuntu@${{ secrets.STAGING_EC2_HOST }}:/home/ubuntu/app.zip
 
-    # Deploy and run Flask
     - name: Deploy on staging EC2
       run: |
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/staging_key.pem ubuntu@${{ secrets.STAGING_EC2_HOST }} '
@@ -89,6 +85,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
     - name: Checkout code
       uses: actions/checkout@v3
 
@@ -97,7 +94,6 @@ jobs:
       with:
         python-version: "3.10"
 
-    # Create .env for production
     - name: Create .env for production
       run: |
         echo "MONGO_URI=${{ secrets.MONGO_URI }}" > .env
