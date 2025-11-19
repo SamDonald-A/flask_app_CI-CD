@@ -3,10 +3,10 @@ name: Sam CI/CD Pipeline
 on:
   push:
     branches:
-      - staging
+      - staging     
   create:
     tags:
-      - '*'
+      - '*'         
 
 jobs:
   # staging
@@ -23,31 +23,35 @@ jobs:
       with:
         python-version: "3.10"
 
+    # Create .env for staging
     - name: Create .env for staging
       run: |
         echo "MONGO_URI=${{ secrets.MONGO_URI }}" > .env
         echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
 
+    # Zip the project
     - name: Zip project
       run: zip -r app.zip . -x "*.git*"
 
+    # Setup SSH key
     - name: Setup SSH key for staging
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.STAGING_EC2_KEY }}" > ~/.ssh/staging_key.pem
         chmod 600 ~/.ssh/staging_key.pem
 
+    # Upload code to EC2
     - name: Upload to staging EC2
       run: |
         scp -o StrictHostKeyChecking=no -i ~/.ssh/staging_key.pem app.zip ubuntu@${{ secrets.STAGING_EC2_HOST }}:/home/ubuntu/app.zip
 
+    # Deploy and run Flask in background
     - name: Deploy on staging EC2
       run: |
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/staging_key.pem ubuntu@${{ secrets.STAGING_EC2_HOST }} '
 
           sudo apt update -y
-          sudo apt install -y unzip python3-venv python3-pip
-
+          sudo apt install unzip python3-venv python3-pip -y
 
           sudo rm -rf /home/ubuntu/app
           sudo mkdir -p /home/ubuntu/app
@@ -57,7 +61,7 @@ jobs:
           python3 -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install flask==2.3.2 flask-pymongo==2.3.0 pymongo==3.13.1 python-dotenv==1.0.0
 
           echo "[Unit]
           Description=Flask App
@@ -67,7 +71,8 @@ jobs:
           User=ubuntu
           WorkingDirectory=/home/ubuntu/app
           EnvironmentFile=/home/ubuntu/app/.env
-          ExecStart=/home/ubuntu/app/venv/bin/python /home/ubuntu/app/app.py
+          ExecStart=/bin/bash -c '\''source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py'\''
+
           Restart=always
 
           [Install]
@@ -92,6 +97,7 @@ jobs:
       with:
         python-version: "3.10"
 
+    # Create .env for production
     - name: Create .env for production
       run: |
         echo "MONGO_URI=${{ secrets.MONGO_URI }}" > .env
@@ -114,7 +120,7 @@ jobs:
       run: |
         ssh -o StrictHostKeyChecking=no -i ~/.ssh/prod_key.pem ubuntu@${{ secrets.PROD_EC2_HOST }} '
           sudo apt update -y
-          sudo apt install -y unzip python3-venv python3-pip
+          sudo apt install unzip python3-venv python3-pip -y
 
           sudo rm -rf /home/ubuntu/app
           sudo mkdir -p /home/ubuntu/app
@@ -124,8 +130,7 @@ jobs:
           python3 -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
-          pip install -r requirements.txt
-
+          pip install flask==2.3.2 flask-pymongo==2.3.0 pymongo==3.13.1 python-dotenv==1.0.0
 
           echo "[Unit]
           Description=Flask App
@@ -135,7 +140,8 @@ jobs:
           User=ubuntu
           WorkingDirectory=/home/ubuntu/app
           EnvironmentFile=/home/ubuntu/app/.env
-          ExecStart=/home/ubuntu/app/venv/bin/python /home/ubuntu/app/app.py
+          ExecStart=/bin/bash -c '\''source /home/ubuntu/app/venv/bin/activate && python /home/ubuntu/app/app.py'\''
+
           Restart=always
 
           [Install]
