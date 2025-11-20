@@ -101,7 +101,7 @@ jobs:
 
     - name: Save SSH key for production
       run: |
-        echo "${{ secrets.EC2_KEY }}" > prod_key.pem
+        echo "${{ secrets.PROD_EC2_KEY }}" > prod_key.pem
         chmod 600 prod_key.pem
 
     - name: Upload to production EC2
