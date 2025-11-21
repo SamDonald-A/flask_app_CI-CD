@@ -2,6 +2,7 @@
 Objective: To Implement a CI/CD workflow using GitHub Actions for a Python application.
 GitHub Links: https://github.com/SamDonald-A/flask_app_CI-CD 
 
+# Stage 1: Setup github for pipeline
 # Go to Provided Git Link for Forking
 
 <img width="976" height="496" alt="image" src="https://github.com/user-attachments/assets/2fd1a76e-6ed5-403f-bfc3-a43368634c91" />
@@ -36,7 +37,7 @@ GitHub Links: https://github.com/SamDonald-A/flask_app_CI-CD
 
 <img width="976" height="492" alt="image" src="https://github.com/user-attachments/assets/ff874cdd-63aa-4076-9d3e-f47b22f84135" />
 
-# Stage 2: Lets setup EC2 instances for staging and production environments
+# Step 2: Lets setup EC2 instances for staging and production environments
 
 <img width="976" height="292" alt="image" src="https://github.com/user-attachments/assets/9f72e436-c505-4da3-97f0-a1a43137255a" />
 <img width="976" height="308" alt="image" src="https://github.com/user-attachments/assets/29f5ae92-548b-4f13-b04a-89a69fea626a" />
@@ -162,6 +163,7 @@ GitHub Links: https://github.com/SamDonald-A/flask_app_CI-CD
 
 <img width="746" height="221" alt="image" src="https://github.com/user-attachments/assets/3f18646a-1fd6-4069-8df8-1796c8e0f64a" />
 
+# Step 4: Production Deployment 
 # Let’s add tag to deploy production – Click Tags in your repo
 
 <img width="816" height="429" alt="image" src="https://github.com/user-attachments/assets/16a1e1d8-0b0b-4436-8727-2c4ae3160101" />
@@ -384,6 +386,7 @@ Form pre-filled with student details.
 MIT License
 
 ---
+
 
 
 
