@@ -213,8 +213,6 @@ GitHub Links: https://github.com/SamDonald-A/flask_app_CI-CD
 
 #  We see the staging is updated instantly with the change
 
-<img width="746" height="221" alt="image" src="https://github.com/user-attachments/assets/132b682b-98c8-4e7e-b239-f2a1c6b2107c" />
-<img width="746" height="221" alt="image" src="https://github.com/user-attachments/assets/6a093db3-c13a-4a57-98bb-ba1bf566971c" />
 <img width="976" height="543" alt="image" src="https://github.com/user-attachments/assets/7761b467-a46c-49f3-97b0-0b5add71a47f" />
 
 # Go to Got tags and releases and click Draft New Release
@@ -386,6 +384,7 @@ Form pre-filled with student details.
 MIT License
 
 ---
+
 
 
 
